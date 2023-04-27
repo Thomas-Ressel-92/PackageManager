@@ -25,6 +25,7 @@ class SelfUpdateInstaller {
     {
         $this->tmpFolderPath = $tmpFolderPath;
         $this->installationFilePath = $installationFilePath;
+        $this->timeStamp = time();
     }
 
     /**
@@ -34,13 +35,12 @@ class SelfUpdateInstaller {
     public function install()
     {
         $cmd = 'php -d memory_limit=2G ' . $this->installationFilePath;
-        yield "Installing " . end(explode("/", $this->installationFilePath)) . "..." .PHP_EOL .PHP_EOL;
+        yield PHP_EOL . "Installing " . end(explode("/", $this->installationFilePath)) . "..." .PHP_EOL .PHP_EOL;
         $envVars = ['COMPOSER_HOME' => $this->tmpFolderPath . DIRECTORY_SEPARATOR . '.composer'];
         /* @var $process \Symfony\Component\Process\Process */
         $process = Process::fromShellCommandline($cmd, null, $envVars, null, 600);
         $process->start();
         
-        $this->timeStamp = time();
         $outputBuffer = [];
         $msgBuffer = '';
         foreach ($process as $msg) {

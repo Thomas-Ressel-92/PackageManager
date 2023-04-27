@@ -1,21 +1,17 @@
 <?php
 namespace axenox\PackageManager\Common\Updater;
 
-use axenox\PackageManager\Common\Updater\SelfUpdateInstaller;
-
 class ReleaseLogEntry
 {    
     private $logsPath = null;
     
-    private $logEntry = null;
+    private $releasePath = null;
     
     private $logFileName = null;
     
-    private $releasePath = null;
-    
     private $logArray = null;
     
-    private $updaterOutput = null;
+    private $updaterOutput = "";
     
     /**
      * 
@@ -102,14 +98,21 @@ class ReleaseLogEntry
     public function addInstallation(SelfUpdateInstaller $selfUpdateInstaller)
     {
         $installArray = [];
-        $logArray = $this->logArray;
         $timeStamp = $this->formatTimeStamp($selfUpdateInstaller->getTimestamp());
-        $requestType = array_key_exists('Download status', $logArray[1]) === true ? "download" : "upload";
-        $this->logFileName = $installArray['Logfile name'] = $timeStamp . "_" . $requestType . "_" . $selfUpdateInstaller->getFormatedStatusMessage() . ".txt";
+        $this->logFileName = $installArray['Logfile name'] = $timeStamp . "_" . $this->getRequestType() . "_" . $selfUpdateInstaller->getFormatedStatusMessage() . ".txt";
         $installArray['Logfile route'] = "log" . DIRECTORY_SEPARATOR . $installArray['Logfile name'];
         $installArray['Installation status'] = $selfUpdateInstaller->getFormatedStatusMessage();
         $installArray['Timestamp'] = $timeStamp;
         $this->logArray = $installArray;
+    }
+    
+    /**
+     * 
+     * @return string
+     */
+    protected function getRequestType()
+    {
+        return array_key_exists('Download status', $this->logArray[1]) === true ? "download" : "upload";
     }
     
     /**
@@ -135,7 +138,7 @@ class ReleaseLogEntry
      *
      * @return array
      */
-    public function getEntry() : array
+    public function getEntryArray() : array
     {
         return $this->logArray;
     }

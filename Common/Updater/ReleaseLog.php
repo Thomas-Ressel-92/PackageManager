@@ -12,7 +12,7 @@ class ReleaseLog
     
     private $releasePath = null;
     
-    private $currentLog = null;
+    private $currentEntry = null;
     
     /**
      * 
@@ -32,7 +32,7 @@ class ReleaseLog
     public function saveEntry(ReleaseLogEntry $releaseLogEntry)
     {
         $log = "";
-        foreach($releaseLogEntry->getEntry() as $logArrayKey => $logElement) {
+        foreach($releaseLogEntry->getEntryArray() as $logArrayKey => $logElement) {
             if(! is_numeric($logArrayKey)) {
                 $log .= "{$logArrayKey}: {$logElement}" . PHP_EOL;
             } else {
@@ -43,9 +43,9 @@ class ReleaseLog
             }
         }
         $log .= PHP_EOL . "Updater Output: " . PHP_EOL . $releaseLogEntry->getUpdaterOutput();
-        $this->currentLog = $log;
+        $this->currentEntry = $log;
         $logFilePath = $this->logsPath . $releaseLogEntry->getLogFileName();
-        file_put_contents($logFilePath, $this->currentLog);
+        file_put_contents($logFilePath, $this->currentEntry);
     }
 
     /**
@@ -117,9 +117,9 @@ class ReleaseLog
      * 
      * @return string
      */
-    public function getCurrentLog() : string
+    public function getCurrentEntry() : string
     {
-        return $this->currentLog;
+        return $this->currentEntry;
     }
     
     /**
@@ -156,14 +156,5 @@ class ReleaseLog
         } else {
             return null;
         }
-    }
-    
-    /**
-     * saves logFile in $this->logsPath
-     */
-    public function __destruct()
-    {
-        $logFilePath = $this->logsPath . $this->logFileName;
-        file_put_contents($logFilePath, $this->logEntry);
     }
 }

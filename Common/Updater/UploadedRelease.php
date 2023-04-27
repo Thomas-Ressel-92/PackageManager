@@ -17,30 +17,40 @@ class UploadedRelease
     
     private $uploadedFiles = null;
     
+    private $uploadPath = null;
+    
     /**
      * 
      * @param ServerRequest $request
      */
-    public function __construct(ServerRequest $request)
+    public function __construct(ServerRequest $request, string $uploadPath)
     {
         $this->request = $request;
         $this->timeStamp = time();
+        $this->uploadPath = $uploadPath;
     }
     
     /**
      * Moves uploaded files to folder and sets upload-Status
-     * @param string $uploadPath
-     * @return NULL
      */
-    public function moveUploadedFiles(string $uploadPath)
+    public function moveUploadedFiles()
     {
         $this->uploadedFiles = $this->request->getUploadedFiles();
         foreach($this->request->getUploadedFiles() as $uploadedFile) {
             /* @var $uploadedFile \GuzzleHttp\Psr7\UploadedFile */
             $fileName = $uploadedFile->getClientFilename();
-            $uploadedFile->moveTo($uploadPath.$fileName);
+            $uploadedFile->moveTo($this->uploadPath . $fileName);
             $uploadedFile->UploadSuccess = $uploadedFile->isMoved();
         }
+    }
+    
+    /**
+     *
+     * @return string
+     */
+    public function getPathAbsolute() : string
+    {
+        return $this->uploadPath . $this->getInstallationFileName();
     }
     
     /**

@@ -37,47 +37,39 @@ class UpdaterFacade extends AbstractHttpFacade
             case $pathInFacade === 'upload-file':
                 
                 // Move uploaded files to uploadPath
-                $uploader = new UploadedRelease($request);
                 $uploadPath = __DIR__ . '/../../../../Upload/';
-                $uploader->moveUploadedFiles($uploadPath);
-                $log = new ReleaseLog($this->getWorkbench());
-                // fills logFile with information about the upload
-                $releaseLogEntry = new ReleaseLogEntry($log);
-                $releaseLogEntry->fillLogFileFormatUpload($uploader);
+                $uploader = new UploadedRelease($request, $uploadPath);
+                $uploader->moveUploadedFiles();
+                // fill logFile with information about the upload
+                $releaseLog = new ReleaseLog($this->getWorkbench());
+                $releaseLogEntry = new ReleaseLogEntry($releaseLog);
+                $releaseLogEntry->addUpload($uploader);
+                
+                foreach ($releaseLogEntry->getCurrentLogText() as $output) {
+                    $releaseLogEntry->addUpdaterOutput($output);
+                }
                 
                 // install
-                $installationFilePath = $uploadPath . $uploader->getInstallationFileName();
-                $selfUpdateInstaller = new SelfUpdateInstaller($installationFilePath, $this->getWorkbench()->filemanager()->getPathToCacheFolder());
-                // fills logFile with information about the installation
-                $releaseLogEntry->fillLogFileFormatInstallation($selfUpdateInstaller);
+                $selfUpdateInstaller = new SelfUpdateInstaller($uploader->getPathAbsolute(), $this->getWorkbench()->filemanager()->getPathToCacheFolder());
                 
-                // logfile: generates logEntry from LogFileFormat
-                $releaseLogEntry->createEntry();
+                foreach ($selfUpdateInstaller->install() as $output) {
+                    $releaseLogEntry->addUpdaterOutput($output);
+                }
+                
+                // fills logFile with information about the installation
+                $releaseLogEntry->addInstallation($selfUpdateInstaller);
+                
+                // save entry in file & in $releaseLog->CurrentEntry
+                $releaseLog->saveEntry($releaseLogEntry);
                 
                 // update release file if installation was successful
                 if($selfUpdateInstaller->getInstallationSuccess()) {
-                    $releaseLogEntry->addNewDeployment($uploader->getTimestamp(), $uploader->getInstallationFileName());
+                    $releaseLogEntry->addDeploymentSuccess($selfUpdateInstaller->getTimestamp(), $uploader->getInstallationFileName());
                 }
-                
+
                 $headers = ['Content-Type' => 'text/plain-stream'];
-                return new Response(200, $headers, $releaseLogEntry->getEntry());
-                
-                /*
-                // Simulate installation with sleep-timer
-                $generator = function ($bytes) use($output) {
-                    yield $output;
-                    for ($i = 0; $i < $bytes; $i++) {
-                        sleep(1);
-                        yield '.'.$i.'.';
-                        ob_flush();
-                        flush();
-                    }
-                };
-                
-                $stream = new IteratorStream($generator(5));
-                $stream = new IteratorStream($installer->install());
-                */
-                
+                return new Response(200, $headers, $releaseLog->getCurrentEntry());
+
             case $pathInFacade === 'status':
                 $releaseLog = new ReleaseLog($this->getWorkbench());
                 $output = "Last Deployment: " . $releaseLog->getLatestDeployment() . PHP_EOL. PHP_EOL;
@@ -91,10 +83,6 @@ class UpdaterFacade extends AbstractHttpFacade
                 $releaseLog = new ReleaseLog($this->getWorkbench());
                 $headers = ['Content-Type' => 'application/json'];
                 return new Response(200, $headers, json_encode($releaseLog->getLogEntries(), JSON_PRETTY_PRINT));
-                
-            case $pathInFacade === 'zip':
-                $zip = new ZipFile();
-                $zip->zip();
 
             // Search for pathInFacade in log-directory
             default:

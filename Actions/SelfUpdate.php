@@ -21,6 +21,8 @@ use axenox\PackageManager\Common\Updater\SelfUpdateInstaller;
  */
 class SelfUpdate extends AbstractActionDeferred implements iCanBeCalledFromCLI
 {
+    private $isSuccess = false;
+    
     /**
      *
      * {@inheritDoc}
@@ -64,9 +66,10 @@ class SelfUpdate extends AbstractActionDeferred implements iCanBeCalledFromCLI
             yield $output;
         }
         
+        // save entry in file & in $releaseLog->CurrentEntry
         $releaseLog->saveEntry($releaseLogEntry);
         
-        yield from $this->installationResponse($releaseLog);
+        yield from $this->installationResponse($releaseLog, $this->isSuccess);
     }
 
     /**
@@ -88,6 +91,7 @@ class SelfUpdate extends AbstractActionDeferred implements iCanBeCalledFromCLI
         
         // save download infos in $releaseLogEntry->logArray
         $releaseLogEntry->addDownload($downloader);
+        // yield infos about downloaded file
         yield from $releaseLogEntry->getCurrentLogText();
         yield $this->printLineDelimiter();
         
@@ -98,7 +102,8 @@ class SelfUpdate extends AbstractActionDeferred implements iCanBeCalledFromCLI
         $releaseLogEntry->addInstallation($selfUpdateInstaller);
         
         // update release file if installation was successful
-        if($selfUpdateInstaller->getInstallationSuccess()) {
+        $this->isSuccess = $selfUpdateInstaller->getInstallationSuccess();
+        if($this->isSuccess) {
             // TODO wo gehört das hin?
             $releaseLogEntry->addDeploymentSuccess($selfUpdateInstaller->getTimestamp(), $downloader->getFileName());
         }
@@ -109,7 +114,7 @@ class SelfUpdate extends AbstractActionDeferred implements iCanBeCalledFromCLI
      * @param ReleaseLogEntry $releaseLogEntry
      * @return \Generator
      */
-    protected function installationResponse(ReleaseLog $releaseLog) : \Generator
+    protected function installationResponse(ReleaseLog $releaseLog, bool $isSuccess) : \Generator
     {
         // post request
         $installationResponse = new InstallationResponse();
@@ -118,9 +123,9 @@ class SelfUpdate extends AbstractActionDeferred implements iCanBeCalledFromCLI
         // placeholder-Login
         $username = admin;
         $password = admin;
-        $response = $installationResponse->sendRequest($localUrl, $username, $password, $releaseLog->getCurrentLog(), "Success");
+        $response = $installationResponse->sendRequest($localUrl, $username, $password, $releaseLog->getCurrentEntry(), $isSuccess);
         yield $this->printLineDelimiter();
-        yield "Post request content: " . PHP_EOL . PHP_EOL . $releaseLog->getCurrentLog();
+        yield "Post request content: " . PHP_EOL . PHP_EOL . $releaseLog->getCurrentEntry();
         yield $this->printLineDelimiter();
         // server-response
         yield "Response (Placeholder): " . PHP_EOL . PHP_EOL . $response->getBody();
